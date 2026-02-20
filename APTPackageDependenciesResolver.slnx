@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="APTPackageDependenciesResolver.Host/APTPackageDependenciesResolver.Host.csproj" />
+  <Project Path="APTPackageDependenciesResolver.Test/APTPackageDependenciesResolver.Test.csproj" />
+</Solution>
