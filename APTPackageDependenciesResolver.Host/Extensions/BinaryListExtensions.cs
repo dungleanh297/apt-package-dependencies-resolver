@@ -68,5 +68,5 @@ public static class BinaryListExtensions
         }
 
         return false;
-    }   
+    }
 }

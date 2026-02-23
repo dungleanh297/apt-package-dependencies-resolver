@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace APTPackageDependenciesResolver;
 
-public record class DebianVirtualPackage(string Name) : IPackage, IEquatable<DebianVirtualPackage>
+public sealed record class DebianVirtualPackage(string Name) : IPackage, IEquatable<DebianVirtualPackage>
 {
     private List<DebianPackage>? _providers;
 
@@ -31,7 +31,8 @@ public record class DebianVirtualPackage(string Name) : IPackage, IEquatable<Deb
             return -1;
         }
 
-        return Name.CompareTo(other.Name);
+        int comparationResult = Name.CompareTo(other.Name);
+        return comparationResult != 0 ? comparationResult : GetType().Name.CompareTo(other.GetType().Name);
     }
 
     public bool Equals(IPackage? other)
@@ -49,7 +50,7 @@ public record class DebianVirtualPackage(string Name) : IPackage, IEquatable<Deb
         _providers ??= new List<DebianPackage>();
 
         int index = _providers.BinarySearch(package);
-        
+
         if (index < 0)
         {
             _providers.Insert(~index, package);

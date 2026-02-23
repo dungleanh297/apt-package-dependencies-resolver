@@ -21,36 +21,27 @@ public class DebianPackageVersionValidator
 
         if (!char.IsDigit(upstreamVersion[0]))
         {
-            throw new FormatException($"Invalid upstream version. The upstream version must start with a digit: {upstreamVersion}");    
+            throw new FormatException($"Invalid upstream version. The upstream version must start with a digit: {upstreamVersion}");
         }
 
         if (debianRevision.Length == 0)
         {
-            goto CheckWhenShouldNotHaveHyphenInUpstream;
+            foreach (char c in upstreamVersion)
+            {
+                if (!char.IsLetterOrDigit(c) && c != '.' && c != '+' && c != '~')
+                {
+                    throw new FormatException($"Invalid character '{c}' in upstream version. The upstream version can only contain letters, digits, dots, plus signs and tildes and cannot have hyphens when there is no Debian revision: {upstreamVersion}");
+                }
+            }
         }
         else
         {
-            goto CheckWhenCanHaveHyphenInUpstream;
-        }
-
-    
-    CheckWhenShouldNotHaveHyphenInUpstream:
-        foreach (char c in upstreamVersion)
-        {
-            if (!char.IsLetterOrDigit(c) && c != '.' && c != '+' && c != '~')
+            foreach (char c in upstreamVersion)
             {
-                throw new FormatException($"Invalid character '{c}' in upstream version. The upstream version can only contain letters, digits, dots, plus signs and tildes and cannot have hyphens when there is no Debian revision: {upstreamVersion}");
-            }
-        }
-
-        return;
-
-    CheckWhenCanHaveHyphenInUpstream:
-        foreach (char c in upstreamVersion)
-        {
-            if (!char.IsLetterOrDigit(c) && c != '.' && c != '+' && c != '~' && c != '-')
-            {
-                throw new FormatException($"Invalid character '{c}' in upstream version. The upstream version can only contain letters, digits, dots, plus signs, tildes and hyphens: {upstreamVersion}");
+                if (!char.IsLetterOrDigit(c) && c != '.' && c != '+' && c != '~' && c != '-')
+                {
+                    throw new FormatException($"Invalid character '{c}' in upstream version. The upstream version can only contain letters, digits, dots, plus signs, tildes and hyphens: {upstreamVersion}");
+                }
             }
         }
     }
@@ -58,6 +49,6 @@ public class DebianPackageVersionValidator
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsValidPrefixCharacter(char c)
     {
-        return char.IsAsciiLetterOrDigit(c) || c == '.' || c == '+' || c == '-' || c == '~';
+        return char.IsDigit(c);
     }
 }

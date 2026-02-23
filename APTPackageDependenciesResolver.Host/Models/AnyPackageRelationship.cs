@@ -1,16 +1,21 @@
+using APTPackageDependenciesResolver.Host.Models;
+
 namespace APTPackageDependenciesResolver;
 
-public class AnyRelationship : IRelationship
+public sealed class AnyRelationship : GrouppingRelationships
 {
-    private readonly List<IRelationship> _packages = [];
-    
-    public bool Add(IRelationship package)
+    public void Add(PackageRelationship package) => base.Add(package);
+
+    public void Remove(PackageRelationship package) => base.Remove(package);
+
+    public override bool Equals(IRelationship? other)
     {
-        return _packages.BinaryInsert(package);
+        if (other is not AnyRelationship otherRelationship)
+        {
+            return false;
+        }
+
+        return Relationships.SequenceEqual(otherRelationship.Relationships);
     }
 
-    public bool Remove(IRelationship package)
-    {
-        return _packages.BinaryRemove(package);
-    }
 }

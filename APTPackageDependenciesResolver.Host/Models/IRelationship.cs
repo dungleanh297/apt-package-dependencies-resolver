@@ -1,6 +1,6 @@
 namespace APTPackageDependenciesResolver;
 
-public interface IRelationship
+public interface IRelationship : IComparable<IRelationship>, IEquatable<IRelationship>
 {
-    
+
 }

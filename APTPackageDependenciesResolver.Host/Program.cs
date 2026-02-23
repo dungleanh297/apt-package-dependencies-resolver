@@ -15,7 +15,7 @@ public class Program
         while (true)
         {
             var line = stream.ReadLine();
-            
+
             if (string.IsNullOrEmpty(line))
             {
                 break;
@@ -24,7 +24,7 @@ public class Program
             if (line.StartsWith(DebianPackageInformation.NameProperty))
             {
                 ref DebianPackageInformation information = ref CollectionsMarshal.GetValueRefOrAddDefault(cachedPackages, null!, out bool existed)!;
-                
+
                 if (!existed)
                 {
                     information = new DebianPackageInformation

@@ -38,12 +38,12 @@ public class DebianPackageReader
         foreach ((string packageName, Range stanzaRange) in context.StanzaRanges)
         {
             ref DebianPackage packageInfo = ref CollectionsMarshal.GetValueRefOrAddDefault(context.Packages, packageName, out var _)!;
-            
+
             if (packageInfo == null)
             {
-                packageInfo = DebianPackageInformationParser.Parse(packageName, stanzaRange, context);
+                packageInfo = DebianPackageParser.Parse(packageName, stanzaRange, context);
             }
-            
+
             result.Add(packageInfo);
         }
 
@@ -60,7 +60,7 @@ public class DebianPackageReader
             {
                 continue;
             }
-            
+
             string packageName = GetThePackageName(data.AsSpan().Slice(range));
             result.Add(packageName, range);
         }
@@ -76,7 +76,7 @@ public class DebianPackageReader
 
         if (fieldNameIndex < 0)
         {
-            throw new InvalidOperationException($"Unable to find the package field on this stanza: {new string(stanza)}");    
+            throw new InvalidOperationException($"Unable to find the package field on this stanza: {new string(stanza)}");
         }
 
         var findNewLineStartRange = fieldNameIndex + PackageFieldNameWithSeperator.Length;

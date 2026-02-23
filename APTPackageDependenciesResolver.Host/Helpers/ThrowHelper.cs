@@ -78,8 +78,8 @@ public static class ThrowHelper
 
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.Append(message);
-        stringBuilder.AppendLine();
-        
+        stringBuilder.Append("\n\n");
+
         if (contextStartIndex < invalidLineStartIndex)
         {
             stringBuilder.Append(context[contextStartIndex..invalidLineStartIndex]);

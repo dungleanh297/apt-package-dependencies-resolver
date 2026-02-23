@@ -18,11 +18,11 @@ public static class ProcessHelper
         }
 
         var process = new Process();
-        
+
         process.StartInfo.FileName = args[0];
         process.StartInfo.RedirectStandardOutput = true;
         process.StartInfo.UseShellExecute = false;
-        
+
         var argsList = process.StartInfo.ArgumentList;
         foreach (var arg in args.Slice(1))
         {
@@ -37,7 +37,7 @@ public static class ProcessHelper
         }
 
         Span<char> buffer = new char[8192];
-        
+
         var stringBuilder = new StringBuilder();
 
         var stdoutStreamReader = new StreamReader(process.StandardOutput.BaseStream);

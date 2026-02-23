@@ -8,7 +8,7 @@ public ref struct StanzaFieldNameValueEnumerator
 
     public StanzaFieldNameValueEnumerator(ReadOnlySpan<char> stanza)
     {
-        _stanza = stanza;    
+        _stanza = stanza;
     }
 
     public StanzaFieldNameValuePair Current => _current;
@@ -24,7 +24,7 @@ public ref struct StanzaFieldNameValueEnumerator
         int seperatorIndex;
         int valueStartIndex, valueEndIndex;
 
-        // Colon not only appearing as a field name and value seperator, but also be used in Description, Homepage (as a URL address), Version, etc... 
+        // Colon not only appearing as a field name and value seperator, but also be used in Description, Homepage (as a URL address), Version, etc...
         // We should find the new line first, then we can confidently know that the first colon is the seperator between name and value.
         // Multiple line and folded value will be discovered later.
         valueEndIndex = nameStartIndex + 1 + _stanza[(nameStartIndex + 1)..].IndexOf('\n');

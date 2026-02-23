@@ -1,5 +1,4 @@
 using System.Runtime.CompilerServices;
-using System.Xml;
 using APTPackageDependenciesResolver.Host.Extensions;
 
 namespace APTPackageDependenciesResolver;
@@ -16,7 +15,12 @@ public static class RelationshipParser
         {
             int seperatorIndex = packageRelationshipRange.End.Value;
 
-            packageRelationship = ParsePackageRelationship(UnfoldAndTrim(relationshipsAsString.Slice(packageRelationshipRange), seperatorIndex), context);
+            if (packageRelationshipRange.Start.Value == seperatorIndex)
+            {
+                ThrowHelper.ThrowInvalidFormat(context.ControlData, relationshipsAsString, "Relationship cannot contains empty relationship");
+            }
+
+            packageRelationship = ParsePackageRelationship(TrimMultilineValue(relationshipsAsString.Slice(packageRelationshipRange)), context);
 
             // The last item in the chain of relationship
             if (seperatorIndex == relationshipsAsString.Length)
@@ -48,7 +52,7 @@ public static class RelationshipParser
                         anyRelationship = null;
                     }
                     else
-                    {                    
+                    {
                         multipleRelationships.Add(packageRelationship);
                     }
                     break;
@@ -64,38 +68,66 @@ public static class RelationshipParser
         throw new Exception($"Failed to parse relationship: {new string(relationshipsAsString)}");
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ReadOnlySpan<char> UnfoldAndTrim(ReadOnlySpan<char> relationship, int seperatorIndex)
-    { 
-        int newLineIndex = relationship.LastIndexOf('\n');
-        
-        if (newLineIndex < 0)
+    private static ReadOnlySpan<char> TrimMultilineValue(in ReadOnlySpan<char> relationship)
+    {
+        int startIndex = 0;
+        int endIndex = relationship.Length;
+        int limit = endIndex - 2;
+        char firstCharacter, secondCharacter;
+
+        while (startIndex <= limit)
         {
-            return relationship;
+            secondCharacter = relationship[startIndex + 1];
+            firstCharacter = relationship[startIndex];
+
+            if (firstCharacter == '\n' && (secondCharacter == ' ' | secondCharacter == '\t'))
+            {
+                startIndex += 2;
+            }
+            else
+            {
+                break;
+            }
         }
 
-        return relationship[Math.Min(newLineIndex, seperatorIndex)..].Trim();
+        limit = startIndex + 2;
+        while (endIndex >= limit)
+        {
+            firstCharacter = relationship[endIndex - 2];
+            secondCharacter = relationship[endIndex - 1];
+
+            if (firstCharacter == '\n' && (secondCharacter == ' ' | secondCharacter == '\t'))
+            {
+                endIndex -= 2;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return relationship.Slice(startIndex, endIndex);
     }
 
     private static PackageRelationship ParsePackageRelationship(in ReadOnlySpan<char> packageRelation, DebianPackageParsingContext context)
     {
-        int versionSpecificStartIndex = packageRelation.IndexOf('(');
+        int versionRelationStartIndex = packageRelation.IndexOf('(');
         VersionRelationType relationType = default;
         DebianPackageVersion? version = null;
         ReadOnlySpan<char> packageName;
-        
-        if (versionSpecificStartIndex >= 0)
+
+        if (versionRelationStartIndex >= 0)
         {
-            int versionSpecificEndIndex = versionSpecificStartIndex + packageRelation[versionSpecificStartIndex..].IndexOf(')');
-            
-            if (versionSpecificEndIndex < 0)
+            int versionRelationEndIndex = versionRelationStartIndex + packageRelation[versionRelationStartIndex..].IndexOf(')');
+
+            if (versionRelationEndIndex < versionRelationStartIndex)
             {
-                throw new Exception($"Version relationship must be ended with enclosed parenthesis: {new string(packageRelation)}");
+                ThrowHelper.ThrowInvalidFormat(context.ControlData, packageRelation, $"Version relationship must be ended with enclosed parenthesis.");
             }
 
-            relationType = ParseVersionRelation(packageRelation[(versionSpecificStartIndex + 1)..versionSpecificEndIndex].Trim(), out var versionAsString, context);
+            relationType = ParseVersionRelation(packageRelation[(versionRelationStartIndex + 1)..versionRelationEndIndex], out var versionAsString, context);
             version = DebianPackageVersion.Parse(versionAsString);
-            packageName = packageRelation[..versionSpecificStartIndex].Trim();
+            packageName = packageRelation[..versionRelationStartIndex].Trim();
         }
         else
         {
@@ -103,49 +135,37 @@ public static class RelationshipParser
         }
 
         IPackage package = context.GetPackageByName(new string(packageName));
-        
+
         return version is null ? new(package) : new(package, relationType, version);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static VersionRelationType ParseVersionRelation(in ReadOnlySpan<char> versionRelation, out ReadOnlySpan<char> version, DebianPackageParsingContext context)
     {
-        int seperatorIndex = versionRelation.IndexOf(' ');
+        // Space character is used to seperate between relation type and version text, this is not required so we need to check for both cases.
+        int seperatorIndex;
         ReadOnlySpan<char> relationTypeAsString = default;
-
         version = default;
 
-        if (seperatorIndex < 0)
+        for (seperatorIndex = 0; seperatorIndex < versionRelation.Length; ++seperatorIndex)
         {
-            for (int i = 0; i < versionRelation.Length; ++i)
-            {
-                char character = versionRelation[i];
-                
-                if (DebianPackageVersionValidator.IsValidPrefixCharacter(character))
-                {
-                    relationTypeAsString = versionRelation[0..i];
-                    version = versionRelation[i..];
-                }
+            char character = versionRelation[seperatorIndex];
 
-                if (i == versionRelation.Length)
-                {
-                    ThrowHelper.ThrowInvalidFormat(context.ControlData, versionRelation, "Version relation not followed with a valid version");
-                }
+            if (DebianPackageVersionValidator.IsValidPrefixCharacter(character))
+            {
+                relationTypeAsString = versionRelation[0..seperatorIndex].Trim();
+                version = versionRelation[seperatorIndex..].Trim();
+                break;
             }
         }
-        else
-        {
-            version = versionRelation[(seperatorIndex + 1)..].Trim();
-            relationTypeAsString = versionRelation[0..seperatorIndex];
 
-            if (relationTypeAsString.Length == 0)
-            {
-                return VersionRelationType.ExactlyEqual;
-            }
+        if (seperatorIndex == versionRelation.Length)
+        {
+            ThrowHelper.ThrowInvalidFormat(context.ControlData, versionRelation, "Version relation not followed with a valid version");
         }
 
         switch (relationTypeAsString)
         {
+            case "":
             case "=":
                 return VersionRelationType.ExactlyEqual;
 
