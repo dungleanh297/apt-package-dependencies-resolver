@@ -69,6 +69,9 @@ public partial class RelationshipParserTest
 	[DataRow("a,b", new string[] { "a", "b" })]
 	[DataRow("a, b, c", new string[] { "a", "b", "c" })]
 	[DataRow("d, b, a,c", new string[] { "a", "b", "c", "d"})]
+	[DataRow("a\n ,\n b\n ,\n c,\n d", new string[] { "a", "b", "c", "d" })]
+	[DataRow("a\n\t,\n\tb\n\t,\n\tc,\n\td", new string[] { "a", "b", "c", "d" })]
+	
 	public void Parse_CommaSeparated_ReturnsMultipleRelationships(string relationship, string[] expectedPackages)
 	{
 		var context = CreateContext(relationship, expectedPackages);
@@ -81,6 +84,8 @@ public partial class RelationshipParserTest
 	[DataRow("a|b", new string[] { "a", "b" })]
 	[DataRow("a | b | c", new string[] { "a", "b", "c" })]
 	[DataRow("d| b | a|c ", new string[] { "a", "b", "c", "d"})]
+	[DataRow("a\n |\n b\n |\n c|\n d", new string[] { "a", "b", "c", "d" })]
+	[DataRow("a\n\t|\n\tb\n\t|\n\tc|\n\td", new string[] { "a", "b", "c", "d" })]
 	public void Parse_PipeSeparated_ReturnsAnyRelationship(string relationship, string[] expectedPackages)
 	{
 		var context = CreateContext(relationship, expectedPackages);

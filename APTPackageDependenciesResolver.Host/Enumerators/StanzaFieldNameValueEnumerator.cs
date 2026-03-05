@@ -48,7 +48,7 @@ public ref struct StanzaFieldNameValueEnumerator
 
         // Follow the Debian's documentation, value can have multiple line, each new line must begin with either space or tab character.
         // Advance the index of the new line until we find the right one
-        while (valueEndIndex <= _stanza.Length - 2 && (_stanza[valueEndIndex + 1] == ' ' || _stanza[valueEndIndex + 1] == '\t'))
+        while (valueEndIndex < _stanza.Length - 1 && (_stanza[valueEndIndex + 1] == ' ' || _stanza[valueEndIndex + 1] == '\t'))
         {
             int newFieldValueEndIndex = _stanza[(valueEndIndex + 2)..^0].IndexOf('\n');
 
@@ -63,11 +63,19 @@ public ref struct StanzaFieldNameValueEnumerator
             valueEndIndex += 2 + newFieldValueEndIndex;
         }
 
+        // The shortcut to:
+        // nameStartIndex = nameStartIndex + (seperatorIndex - nameStartIndex - _stanza[nameStartIndex..seperatorIndex].TrimStart().Length);
+        nameStartIndex = seperatorIndex - _stanza[nameStartIndex..seperatorIndex].TrimStart().Length;
         nameEndIndex = nameStartIndex + _stanza[nameStartIndex..seperatorIndex].TrimEnd().Length;
 
         FieldNameValidator.ThrowOnInvalid(_stanza[nameStartIndex..nameEndIndex]);
 
-        // The shorthand version of:
+        // Update _startIndex for the next enumerating before trimming to avoid throwing exception about seperator when there's the last field that can be enumerated but contains only space at the end
+        // For example: 
+        // "Package:7z    "
+        _startIndex = valueEndIndex + 1;
+
+        // The shortcut for of:
         // valueStartIndex = seperatorIndex + 1 + (valueEndIndex - (seperatorIndex + 1) - _stanza[(seperatorIndex + 1)..valueEndIndex].TrimStart().Length);
         // Which:
         //   seperatorIndex + 1: The index of character after the seperator
@@ -75,10 +83,10 @@ public ref struct StanzaFieldNameValueEnumerator
         //   _stanza[(seperatorIndex + 1)..valueEndIndex].TrimStart().Length: The final length after trimming
 
         valueStartIndex = valueEndIndex - _stanza[(seperatorIndex + 1)..valueEndIndex].TrimStart().Length;
+        valueEndIndex = valueStartIndex + _stanza[valueStartIndex..valueEndIndex].TrimEnd().Length;
 
         // Update the new state of the enumerator
         // Skip the new line character
-        _startIndex = valueEndIndex + 1;
 
         _current = new StanzaFieldNameValuePair
         {

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using APTPackageDependenciesResolver.Host.Extensions;
 
@@ -70,6 +71,11 @@ public static class RelationshipParser
 
     private static ReadOnlySpan<char> TrimMultilineValue(in ReadOnlySpan<char> relationship)
     {
+        if (relationship.Length < 2)
+        {
+            return relationship;
+        }
+        
         int startIndex = 0;
         int endIndex = relationship.Length;
         int limit = endIndex - 2;
@@ -80,7 +86,7 @@ public static class RelationshipParser
             secondCharacter = relationship[startIndex + 1];
             firstCharacter = relationship[startIndex];
 
-            if (firstCharacter == '\n' && (secondCharacter == ' ' | secondCharacter == '\t'))
+            if (firstCharacter == '\n' && (secondCharacter == ' ' || secondCharacter == '\t'))
             {
                 startIndex += 2;
             }
@@ -90,13 +96,18 @@ public static class RelationshipParser
             }
         }
 
+        if (startIndex >= endIndex)
+        {
+            return default;
+        }
+
         limit = startIndex + 2;
-        while (endIndex >= limit)
+        while (endIndex > limit)
         {
             firstCharacter = relationship[endIndex - 2];
             secondCharacter = relationship[endIndex - 1];
 
-            if (firstCharacter == '\n' && (secondCharacter == ' ' | secondCharacter == '\t'))
+            if (firstCharacter == '\n' && (secondCharacter == ' ' || secondCharacter == '\t'))
             {
                 endIndex -= 2;
             }
@@ -106,7 +117,7 @@ public static class RelationshipParser
             }
         }
 
-        return relationship.Slice(startIndex, endIndex);
+        return relationship[startIndex..endIndex];
     }
 
     private static PackageRelationship ParsePackageRelationship(in ReadOnlySpan<char> packageRelation, DebianPackageParsingContext context)
