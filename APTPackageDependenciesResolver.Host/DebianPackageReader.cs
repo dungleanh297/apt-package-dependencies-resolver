@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace APTPackageDependenciesResolver;
@@ -37,13 +38,7 @@ public class DebianPackageReader
 
         foreach ((string packageName, Range stanzaRange) in context.StanzaRanges)
         {
-            ref DebianPackage packageInfo = ref CollectionsMarshal.GetValueRefOrAddDefault(context.Packages, packageName, out var _)!;
-
-            if (packageInfo == null)
-            {
-                packageInfo = DebianPackageParser.Parse(packageName, stanzaRange, context);
-            }
-
+            DebianPackage packageInfo = DebianPackageParser.Parse(packageName, stanzaRange, context);
             result.Add(packageInfo);
         }
 
@@ -62,7 +57,11 @@ public class DebianPackageReader
             }
 
             string packageName = GetThePackageName(data.AsSpan().Slice(range));
-            result.Add(packageName, range);
+            bool added = result.TryAdd(packageName, range);
+            if (!added)
+            {
+                LogHelper.LogWarning($"Duplicate package: {packageName}");
+            }
         }
 
         return result;

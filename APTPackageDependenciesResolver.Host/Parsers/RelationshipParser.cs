@@ -1,7 +1,3 @@
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using APTPackageDependenciesResolver.Host.Extensions;
-
 namespace APTPackageDependenciesResolver;
 
 public static class RelationshipParser
@@ -75,7 +71,7 @@ public static class RelationshipParser
         {
             return relationship;
         }
-        
+
         int startIndex = 0;
         int endIndex = relationship.Length;
         int limit = endIndex - 2;

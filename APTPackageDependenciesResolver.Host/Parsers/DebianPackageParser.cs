@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 
 namespace APTPackageDependenciesResolver;
 
@@ -9,16 +10,20 @@ public static class DebianPackageParser
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(packageName);
 
+        ref DebianPackage package = ref CollectionsMarshal.GetValueRefOrAddDefault(context.Packages, packageName, out bool packageAlreadyExists)!;
+
+        if (packageAlreadyExists)
+        {
+            return package;
+        }
+
         int setProperties = 0;
         ReadOnlySpan<char> stanza = context.ControlData.AsSpan().Slice(stanzaRange);
 
-        DebianPackage package = new DebianPackage()
+        package = new DebianPackage()
         {
             Name = packageName,
         };
-
-        // Add the package to the context before parsing relationships to handle circular dependencies
-        context.Packages.Add(packageName, package);
 
         foreach (var nameValuePair in new StanzaFieldNameValueEnumerator(stanza))
         {
@@ -28,7 +33,7 @@ public static class DebianPackageParser
             switch (fieldName)
             {
                 case "Depends":
-                    if ((setProperties | 0x1) != 0)
+                    if ((setProperties & 0x1) != 0)
                     {
                         ThrowOnDuplicateField(context, nameValuePair.Name);
                     }
@@ -37,7 +42,7 @@ public static class DebianPackageParser
                     break;
 
                 case "Pre-Depends":
-                    if ((setProperties | 0x2) != 0)
+                    if ((setProperties & 0x2) != 0)
                     {
                         ThrowOnDuplicateField(context, nameValuePair.Name);
                     }
@@ -46,7 +51,7 @@ public static class DebianPackageParser
                     break;
 
                 case "Provides":
-                    if ((setProperties | 0x4) != 0)
+                    if ((setProperties & 0x4) != 0)
                     {
                         ThrowOnDuplicateField(context, nameValuePair.Name);
                     }
@@ -55,7 +60,7 @@ public static class DebianPackageParser
                     break;
 
                 case "Recommends":
-                    if ((setProperties | 0x8) != 0)
+                    if ((setProperties & 0x8) != 0)
                     {
                         ThrowOnDuplicateField(context, nameValuePair.Name);
                     }
@@ -64,7 +69,7 @@ public static class DebianPackageParser
                     break;
 
                 case "Suggests":
-                    if ((setProperties | 0x10) != 0)
+                    if ((setProperties & 0x10) != 0)
                     {
                         ThrowOnDuplicateField(context, nameValuePair.Name);
                     }

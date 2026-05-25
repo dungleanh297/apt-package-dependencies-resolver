@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using APTPackageDependenciesResolver.Host.Models;
+using Microsoft.VisualBasic;
 
 namespace APTPackageDependenciesResolver;
 
@@ -71,7 +72,6 @@ public partial class RelationshipParserTest
 	[DataRow("d, b, a,c", new string[] { "a", "b", "c", "d"})]
 	[DataRow("a\n ,\n b\n ,\n c,\n d", new string[] { "a", "b", "c", "d" })]
 	[DataRow("a\n\t,\n\tb\n\t,\n\tc,\n\td", new string[] { "a", "b", "c", "d" })]
-	
 	public void Parse_CommaSeparated_ReturnsMultipleRelationships(string relationship, string[] expectedPackages)
 	{
 		var context = CreateContext(relationship, expectedPackages);
@@ -106,7 +106,7 @@ public partial class RelationshipParserTest
 	{
 		var context = CreateContext(relationship, expectedPackages.SelectMany(e => e).ToArray());
 		var multipleRelationships = Assert.IsInstanceOfType<MultipleRelationships>(RelationshipParser.Parse(relationship.AsSpan(), context), RelationshipMustBeMultpleRelationship);
-		var relationshipAsList = GetRelationshipsAsList(multipleRelationships);
+		var relationshipAsList = multipleRelationships.GetRelationshipsAsList();
 
 		Assert.IsTrue(relationshipAsList.Select(static rel => rel.GetType()).SequenceEqual(expectedRelationshipTypes), IncorrectRelationshipItemsInGrouppingRelationship);
 		Assert.IsTrue(relationshipAsList.Select(static rel => rel is GrouppingRelationships grouppingRelationships ? grouppingRelationships.Relationships.Length : 1).SequenceEqual(expectedPackages.Select(e => e.Length)), IncorrectRelationshipItemsInGrouppingRelationship);
@@ -178,31 +178,14 @@ public partial class RelationshipParserTest
 		);
 	}
 
-	private static PackageRelationship AssertContainsPackageRelationship(GrouppingRelationships grouppingRelationships, Predicate<IPackage> predicate, string message)
-	{
-		foreach (var relationship in grouppingRelationships.Relationships)
-		{
-			if (relationship is PackageRelationship packageRelationship && predicate(packageRelationship.Package))
-			{
-				return packageRelationship;
-			}
-		}
-
-		Assert.Fail(message);
-		return null;
-	}
-
-	[UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_relationships")]
-	private static extern ref List<IRelationship> GetRelationshipsAsList(GrouppingRelationships grouppingRelationships);
-
 	private static IEnumerable<PackageRelationship> FlattenAnyRelationship(AnyRelationship anyRelationship)
 	{
-		return GetRelationshipsAsList(anyRelationship).Select(e => Assert.IsInstanceOfType<PackageRelationship>(e, InvalidTypesOfRelationshipItemsOfAnyRelationship));	
+		return anyRelationship.GetRelationshipsAsList().Select(e => Assert.IsInstanceOfType<PackageRelationship>(e, InvalidTypesOfRelationshipItemsOfAnyRelationship));	
 	}
 
 	private static IEnumerable<PackageRelationship> FlattenMultipleRelationship(MultipleRelationships relationships)
 	{
-		return GetRelationshipsAsList(relationships).SelectMany(
+		return relationships.GetRelationshipsAsList().SelectMany(
 			static rel =>
 			{
 				return rel is AnyRelationship anyRelationship ? FlattenAnyRelationship(anyRelationship) :

@@ -1,39 +1,17 @@
-﻿
-using System.Diagnostics;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.CompilerServices;
+using APTPackageDependenciesResolver;
 
 public class Program
 {
-    private const string DefaultAdministrationPath = "/var/lib/dpkg";
 
     public static void Main()
     {
-/*
-        var stream = new StreamReader(process.OpenStandardOutputStream());
-        var cachedPackages = new Dictionary<string, DebianPackageInformation>();
+        DebianPackageReader reader = new DebianPackageReader();
+        List<DebianPackage> installedPackages = reader.GetAllInstalledPackages();
 
-        while (true)
+        foreach (var pkg in installedPackages)
         {
-            var line = stream.ReadLine();
-
-            if (string.IsNullOrEmpty(line))
-            {
-                break;
-            }
-
-            if (line.StartsWith(DebianPackageInformation.NameProperty))
-            {
-                ref DebianPackageInformation information = ref CollectionsMarshal.GetValueRefOrAddDefault(cachedPackages, null!, out bool existed)!;
-
-                if (!existed)
-                {
-                    information = new DebianPackageInformation
-                    {
-                        Name = line.Substring(DebianPackageInformation.NameProperty.Length),
-                    };
-                }
-            }
+            Console.WriteLine(pkg.Name);
         }
-*/
     }
 }

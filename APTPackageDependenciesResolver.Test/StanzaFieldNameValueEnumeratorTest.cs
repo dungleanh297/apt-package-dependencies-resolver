@@ -6,7 +6,7 @@ public sealed class StanzaFieldNameValueEnumeratorTest
     private static void AssertEnumerator(string stanza, StanzaFieldNameValueEnumerator enumerator, params string[][] expectedPairs)
     {
         int i = 0;
-        
+
         while (enumerator.MoveNext() && i < expectedPairs.Length)
         {
             StanzaFieldNameValuePair current = enumerator.Current;
@@ -14,7 +14,7 @@ public sealed class StanzaFieldNameValueEnumeratorTest
             (int valueStart, int valueLength) = current.Value.GetOffsetAndLength(stanza.Length);
             if (!stanza.AsSpan().Slice(nameStart, nameLength).SequenceEqual(expectedPairs[i][0].AsSpan()))
             {
-                Assert.Fail($"Mismatch stanza field name. Expected {expectedPairs[i][0]}. Actual {stanza.Substring(nameStart, nameLength)}.");   
+                Assert.Fail($"Mismatch stanza field name. Expected {expectedPairs[i][0]}. Actual {stanza.Substring(nameStart, nameLength)}.");
             }
 
             if (!stanza.AsSpan().Slice(valueStart, valueLength).SequenceEqual(expectedPairs[i][1].AsSpan()))
@@ -29,7 +29,7 @@ public sealed class StanzaFieldNameValueEnumeratorTest
         {
             i++;
         }
-        
+
         Assert.AreEqual(expectedPairs.Length, i, "Incorrect number of enumerated element.");
     }
 
@@ -38,10 +38,6 @@ public sealed class StanzaFieldNameValueEnumeratorTest
     [DataRow("Package:7z   ", "Package", "7z")]
     [DataRow("Package:   7z", "Package", "7z")]
     [DataRow("Package:   7z   ", "Package", "7z")]
-    [DataRow("  Package:7z", "Package", "7z")]
-    [DataRow("Package   :7z", "Package", "7z")]
-    [DataRow("   Package   :7z", "Package", "7z")]
-    [DataRow("   Package   :   7z   ", "Package", "7z")]
     public void SingleSimpleField(string stanza, string expectedName, string expectedValue)
     {
         var nameValuePairs = new StanzaFieldNameValueEnumerator(stanza);
@@ -101,7 +97,7 @@ public sealed class StanzaFieldNameValueEnumeratorTest
     Description: First multiline
      Continuation of first
     Depends: lib1, lib2,
-    """ + 
+    """ +
     "\n\tlib3, lib4\n" +
     """
     Recommends: opt1,
@@ -151,9 +147,19 @@ public sealed class StanzaFieldNameValueEnumeratorTest
             "Exception should be thrown when encountering missing colon.");
     }
 
+    [TestMethod]
+    [DataRow("  Package: test")]
+    [DataRow("\tPackage: test")]
+    public void StanzaStartsWithWhiteSpaceOrTabCharacter_Throws(string stanza)
+    {
+        Assert.Throws<ArgumentException>(() => new StanzaFieldNameValueEnumerator(stanza.AsSpan()));
+    }
+
     private static void AssertFieldValuePair(string[] expectedNameValuePair, string actualName, string actualValue)
     {
         Assert.AreEqual(expectedNameValuePair[0], actualName, "Incorrect field name");
         Assert.AreEqual(expectedNameValuePair[1], actualValue, "Incorrect field value");
     }
+
+
 }

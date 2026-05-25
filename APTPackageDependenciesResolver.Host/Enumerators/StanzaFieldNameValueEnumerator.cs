@@ -1,3 +1,5 @@
+using System.ComponentModel;
+
 namespace APTPackageDependenciesResolver;
 
 public ref struct StanzaFieldNameValueEnumerator
@@ -8,6 +10,11 @@ public ref struct StanzaFieldNameValueEnumerator
 
     public StanzaFieldNameValueEnumerator(ReadOnlySpan<char> stanza)
     {
+        if (stanza.Length > 0 && (stanza[0] == ' ' || stanza[0] == '\t'))
+        {
+            throw new ArgumentException(
+                "Stanza must not be started with white space or tab character. These characters are indicating multiline value");
+        }
         _stanza = stanza;
     }
 
@@ -63,15 +70,13 @@ public ref struct StanzaFieldNameValueEnumerator
             valueEndIndex += 2 + newFieldValueEndIndex;
         }
 
-        // The shortcut to:
-        // nameStartIndex = nameStartIndex + (seperatorIndex - nameStartIndex - _stanza[nameStartIndex..seperatorIndex].TrimStart().Length);
-        nameStartIndex = seperatorIndex - _stanza[nameStartIndex..seperatorIndex].TrimStart().Length;
+        // Do not trim the field name. If the new line begins with the space, that means the space is the part of multiline value.
         nameEndIndex = nameStartIndex + _stanza[nameStartIndex..seperatorIndex].TrimEnd().Length;
 
         FieldNameValidator.ThrowOnInvalid(_stanza[nameStartIndex..nameEndIndex]);
 
         // Update _startIndex for the next enumerating before trimming to avoid throwing exception about seperator when there's the last field that can be enumerated but contains only space at the end
-        // For example: 
+        // For example:
         // "Package:7z    "
         _startIndex = valueEndIndex + 1;
 

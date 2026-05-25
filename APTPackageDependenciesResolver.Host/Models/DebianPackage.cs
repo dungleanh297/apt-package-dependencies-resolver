@@ -5,7 +5,7 @@ namespace APTPackageDependenciesResolver;
 
 public sealed class DebianPackage : IPackage
 {
-    private List<PackageRelationship>? _provides;
+    private List<PackageRelationship> _providesRelationship = [];
 
     public required string Name { get; set; }
 
@@ -17,7 +17,7 @@ public sealed class DebianPackage : IPackage
 
     public IRelationship? Recommends { get; set; }
 
-    public ReadOnlySpan<PackageRelationship> Provides => CollectionsMarshal.AsSpan(_provides ??= new List<PackageRelationship>());
+    public ReadOnlySpan<PackageRelationship> Provides => CollectionsMarshal.AsSpan(_providesRelationship);
 
     public override bool Equals(object? obj)
     {
@@ -31,8 +31,6 @@ public sealed class DebianPackage : IPackage
 
     public void UpdateProvidesRelationship(IRelationship? relationship)
     {
-        List<PackageRelationship>? oldProvides = _provides;
-
         if (relationship is MultipleRelationships grouppingRelationships)
         {
             ReadOnlySpan<IRelationship> relationships = grouppingRelationships.Relationships;
@@ -46,8 +44,13 @@ public sealed class DebianPackage : IPackage
                 }
             }
 
-            DetachOldProvides(oldProvides);
-            _provides = oldProvides;
+            DetachAllProvidesRelationship();
+
+            foreach (var subRelationship in newRelationships)
+            {
+                AttachProvidesRelationship(Unsafe.As<PackageRelationship>(subRelationship));
+            }
+
         }
         else if (relationship is PackageRelationship packageRelationship)
         {
@@ -56,19 +59,8 @@ public sealed class DebianPackage : IPackage
                 throw new ArgumentException("Invalid relationship for Provides field. Only relationships with DebianVirtualPackage and optionally with an exact version are allowed.", nameof(relationship));
             }
 
-            if (_provides is null)
-            {
-                _provides = [];
-            }
-            else
-            {
-                DetachOldProvides(_provides);
-                _provides.Clear();
-            }
-
-            _provides.Add(packageRelationship);
-
-            Unsafe.As<DebianVirtualPackage>(packageRelationship.Package).AddProviderPackage(this);
+            DetachAllProvidesRelationship();
+            AttachProvidesRelationship(packageRelationship);
         }
         else
         {
@@ -77,14 +69,34 @@ public sealed class DebianPackage : IPackage
 
     }
 
-    private void DetachOldProvides(List<PackageRelationship>? oldProvides)
+    private void AttachProvidesRelationship(PackageRelationship packageRelationship)
     {
-        if (oldProvides is null)
+        /*
+
+        Sometimes there's package out there with the declaration like this:
+          Package: antigravity
+          Replaces: antigravity
+          Provides: antigravity
+          Conflicts: antigravity
+
+          In that case, just completely ignore them.
+        */
+        if (packageRelationship.Package is not DebianVirtualPackage virtualPackage)
         {
             return;
         }
 
-        foreach (var packageRelationship in oldProvides)
+        virtualPackage.AddProviderPackage(this);
+    }
+
+    private void DetachAllProvidesRelationship()
+    {
+        if (_providesRelationship is null)
+        {
+            return;
+        }
+
+        foreach (var packageRelationship in _providesRelationship)
         {
             Unsafe.As<DebianVirtualPackage>(packageRelationship.Package).RemoveProviderPackage(this);
         }
@@ -119,6 +131,6 @@ public sealed class DebianPackage : IPackage
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsValidPackageRelationship(PackageRelationship relationship)
     {
-        return relationship.Package is DebianVirtualPackage && (!relationship.RelationType.HasValue || relationship.RelationType.Value == VersionRelationType.ExactlyEqual);
+        return !relationship.RelationType.HasValue || relationship.RelationType.Value == VersionRelationType.ExactlyEqual;
     }
 }
